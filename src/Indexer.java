@@ -1,77 +1,236 @@
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.FieldType;
+import org.apache.lucene.document.StoredField;
+import org.apache.lucene.index.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
+import javax.xml.XMLConstants;
+import javax.xml.parsers.*;
+import java.io.*;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 /**
- * Created by Andreas on 08.05.2017.
+ * Created by Andreas.
  */
 public class Indexer {
-    private HashMap<String, ArrayList<String>> index;
-    private ArrayList<String> tokens;
-    private String folder_path;
-    private int filecounter;
+    Directory dir = null;
+    IndexWriter writer = null;
+    DocumentBuilder doc_builder = null;
+    org.w3c.dom.Document xml_document = null;
+    Path index_path;
+    IndexReader reader;
+    DefaultHandler handler;
 
-
-    public Indexer(String folder_path_){
-        index = new HashMap<>();
-        tokens  = new ArrayList<>();
-        folder_path = folder_path_;
-        filecounter = 0;
-    }
-    public void processFiles(){
-        Directory dir;
+    public Indexer(String path, DefaultHandler handler, IndexWriter writer) throws IOException {
         try {
-            dir = FSDirectory.open((new File(folder_path+"/index")).toPath());
+            index_path = new File(Paths.get("").toAbsolutePath().toString() + "\\index").toPath();
+            dir = FSDirectory.open((index_path));
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        FileInputStream is = null;
+        try {
+            is = new FileInputStream(path);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        InputSource in_source = new InputSource(is);
+        try {
+            doc_builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            System.out.println("Start parsing");
+            long start = System.currentTimeMillis();
+
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, false);
+            SAXParser parser = factory.newSAXParser();
+            parser.parse(in_source, handler);
+            if(handler instanceof StackExchangeHandler)
+                retrieveCooccurrences((StackExchangeHandler) handler);
+            else
+                new File(Paths.get("").toAbsolutePath() + "\\index\\co_occurrences.txt").delete();
+            long end = System.currentTimeMillis();
+            System.out.println("Parsing took " + (end - start) / 1000 + "." + (end - start) % 1000 + " seconds");
+            System.out.println(" Sax Parser done");
+            //xml_document = doc_builder.parse(in_source);
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //extractDocuments();
+        try {
+            writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
 
-
-        File folder = new File(folder_path);
-        File[] files_in_folder;
-        ArrayList<String> actual_file = new ArrayList<>();
-        String actual_filename;
-        if(folder.isDirectory()){
-            files_in_folder = folder.listFiles();
-            for(File fd : files_in_folder){
-                try {
-                    if(fd.isFile() && fd.getAbsolutePath().contains(".txt")) {
-                        if (Paths.get(fd.getAbsolutePath()) != null) {
-                            actual_file = (ArrayList<String>) Files.readAllLines(Paths.get(fd.getAbsolutePath()), Charset.forName("Cp1252"));
-                            actual_filename = fd.getAbsolutePath();
-                            for (String line : actual_file) {
-                                tokens.addAll(Arrays.asList(line.split(" ")));
-                            }
-                            if (tokens != null) {
-                                for (String term : tokens) {
-                                    term = term.trim();
-                                    if (index.containsKey(term) == false) {
-                                        index.put(term, new ArrayList<String>());
-                                        index.get(term).add(actual_filename);
-                                    } else {
-                                        index.get(term).add(actual_filename);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
+        reader = DirectoryReader.open(dir);
+        System.out.println("Indexing done");
 
     }
-    public HashMap<String, ArrayList<String>> getIndex(){
-        return index;
+
+    public Indexer(String path) throws IOException {
+        try {
+            index_path = new File(Paths.get("").toAbsolutePath().toString() + "\\index").toPath();
+            dir = FSDirectory.open((index_path));
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        FileInputStream is = null;
+        try {
+             is = new FileInputStream(new File(Paths.get("").toAbsolutePath().toString()+"\\index_source\\Posts.xml"));
+        } catch (FileNotFoundException e) {
+            System.out.println("Could not open File!");
+            e.printStackTrace();
+        }
+        InputSource in_source = new InputSource(is);
+        if(!DirectoryReader.indexExists(FSDirectory.open(index_path))) {
+            try {
+                IndexWriterConfig conf = new IndexWriterConfig(new StandardAnalyzer());
+                conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE);
+                conf.setRAMBufferSizeMB(1024);
+
+                writer = new IndexWriter(dir, conf);
+                doc_builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+                System.out.println("Start parsing");
+                SAXParserFactory factory = SAXParserFactory.newInstance();
+                factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, false);
+                SAXParser parser = factory.newSAXParser();
+                //WikipediaHandler handler = new WikipediaHandler(writer);
+                handler = new StackExchangeHandler(writer);
+
+                parser.parse(in_source, (DefaultHandler) handler);
+                retrieveCooccurrences((StackExchangeHandler) handler);
+                System.out.println(" Sax Parser done");
+                //xml_document = doc_builder.parse(in_source);
+            } catch (ParserConfigurationException e) {
+                e.printStackTrace();
+            } catch (SAXException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            //extractDocuments();
+            try {
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            System.out.println("Here");
+        }
+
+        reader = DirectoryReader.open(dir);
+        System.out.println("Indexing done");
+    }
+
+
+    /**
+     * Can be used when indexing small XML-Files with only some Documents.
+     * When used with many documents and big XML-Files it will cause an
+     * OutOfMemory error
+     * @return returns an ArrayList with Lucene documents
+     */
+    public ArrayList<Document> extractDocuments() throws OutOfMemoryError{
+        ArrayList docs = new ArrayList();
+        NodeList xml_pages = xml_document.getElementsByTagName("page");
+        for(int i = 0; i < xml_pages.getLength(); i++){
+            org.apache.lucene.document.Document lucene_doc = new org.apache.lucene.document.Document();
+            NodeList page_childs = xml_pages.item(i).getChildNodes();
+            String title = null;
+            String content = null;
+            if(i % 1000 == 0)
+                System.out.println("Indexed doc " + i + " from " + xml_pages.getLength());
+
+            for(int j = 0; j < page_childs.getLength(); j++){
+                switch (page_childs.item(j).getNodeName()){
+                    case "title":
+                        title = page_childs.item(j).getTextContent();
+                        break;
+                    case "revision":
+                        for(int k = 0; k < page_childs.item(j).getChildNodes().getLength(); k++){
+                            if(page_childs.item(j).getChildNodes().item(k).getNodeName().equals("text"))
+                                content = page_childs.item(j).getChildNodes().item(k).getTextContent();
+                        }
+                }
+            }
+            FieldType field_type = new FieldType();
+            field_type.setStored(true);
+            field_type.setTokenized(true);
+            field_type.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS_AND_OFFSETS);
+            field_type.setStoreTermVectors(true);
+            field_type.setStoreTermVectorOffsets(true);
+            field_type.setStoreTermVectorPositions(true);
+
+            Field content_field = new Field("content", content, field_type);
+            StoredField title_field = new StoredField("title", title);
+            lucene_doc.add(content_field);
+            lucene_doc.add(title_field);
+            docs.add(lucene_doc);
+            try {
+                writer.addDocument(lucene_doc);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return docs;
+    }
+
+    public DocumentBuilder getDocbuilder() {
+        return doc_builder;
+    }
+
+    /**
+     * @return returns the IndexReader
+     */
+    public IndexReader getReader() {
+        return reader;
+    }
+
+    public void retrieveCooccurrences(StackExchangeHandler handler) {
+        HashMap<String, HashMap<String, Integer>> co_occurrences  = handler.getCo_occurrences();
+        String co_occurrence_string = "";
+        for(String tag: (new ArrayList<String>(co_occurrences.keySet()))) {
+            HashMap<String, Integer> value =  co_occurrences.get(tag);
+            String best_key = "";
+            Integer best_value = 0;
+            if(value != null) {
+                for (String key : value.keySet()) {
+                    if (best_key.length() == 0) {
+                        best_key = key;
+                        best_value = value.get(key);
+                    } else if (value.get(key) > best_value) {
+                        best_value = value.get(key);
+                        best_key = key;
+                    }
+                }
+                co_occurrence_string += tag + "|" + best_key + ";";
+            }
+        }
+        try {
+            FileOutputStream os = new FileOutputStream(Paths.get("").toAbsolutePath() + "\\index\\co_occurrences.txt", false);
+            os.write(co_occurrence_string.getBytes(), 0, co_occurrence_string.length());
+            os.flush();
+            os.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        //System.out.println("cooccurrences" + co_occurrence_string);
     }
 }

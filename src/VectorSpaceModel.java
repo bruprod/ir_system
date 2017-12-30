@@ -1,5 +1,4 @@
 
-import net.jafama.FastMath;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.BooleanClause;
@@ -94,7 +93,7 @@ public class VectorSpaceModel {
                 terms_string_map.put(save, ref.utf8ToString());
                 int doc_frequency = reader.docFreq(new Term(content, save.utf8ToString()));
                 double epsilon = 0.0000000000000000001;
-                double idf = FastMath.log(number_docs / (doc_frequency+epsilon));
+                double idf = Math.log(number_docs / (doc_frequency+epsilon));
                 inverse_doc_frequencies.put(save, idf);
                 number_terms++;
                 //document_frequencies.put(save, reader.docFreq(new Term(content, save.utf8ToString())));
@@ -173,36 +172,7 @@ public class VectorSpaceModel {
                 }
             }
             System.out.println("Cooc map size: " + co_occurrences.size());
-            FileInputStream fs = null;
-            try {
-                fs = new FileInputStream(Paths.get("inlinks.txt").toFile());
-                String link;
-                BufferedReader ir = new BufferedReader(new InputStreamReader(fs));
-                while((link = ir.readLine()) != null){
-                    //System.out.println(inlinks_string);
-                    String[] link_arr = link.split(":");
-                    if(link_arr.length > 1) {
-                        String from = link_arr[0].toLowerCase().replace("_", " ");
-                        String to = link_arr[1].toLowerCase().replace("_", " ");
-                        Doc doc = documents.get(to);
-                        if (doc != null) {
-                            doc.addInlink(from);
-                        }
-                        else{
-                            //System.out.println(to);
-                        }
-                    }
-                }
-                fs.close();
 
-            } catch (FileNotFoundException e) {
-                //e.printStackTrace();
-                //System.exit(2);
-            }
-
-
-
-            System.out.println("Links read");
             prog_bar.setValue(prog_bar.getValue()+10);
 
             System.out.println("Documents size: " + documents.size());
@@ -278,7 +248,7 @@ public class VectorSpaceModel {
         }
         else{
             //System.out.println("Tquery" + t_query.toString());
-            BytesRef ref = getReference(t_query.getTerm().text());
+            BytesRef ref = new BytesRef(t_query.getTerm().text());
             if(ref != null)
                 query_terms.add(ref);
 
@@ -402,10 +372,6 @@ public class VectorSpaceModel {
      * @return returns the inverse document frequency for a token
      */
     public double inverseDocFreq(BytesRef token){
-        /*double epsilon = 0.0000000000000000001;
-        double idf = (number_docs / (getDocFreq(token)+epsilon));
-
-        return Math.log(idf);*/
         Double idf = inverse_doc_frequencies.get(token);
         if(idf == null)
             idf = 0.0;
@@ -413,11 +379,6 @@ public class VectorSpaceModel {
         return idf;
     }
 
-    public double inverseDocFreqBM25(BytesRef token){
-        int doc_freq = getDocFreq(token);
-        double idf = Math.log(((number_docs - doc_freq)+0.5)/(doc_freq +0.5));
-        return  idf;
-    }
 
     /**
      * @return returns the ArrayList with all documents.
@@ -505,7 +466,7 @@ public class VectorSpaceModel {
         {
             if(doc1.getTfidfVector() == null) {
                 ArrayList<BytesRef> tokens = doc1.getTokens();
-                for (int i = 0; i < tokens.size(); i++) {
+                for(int i = 0; i < tokens.size(); i++) {
                     BytesRef ref = tokens.get(i);
                     int freq = Collections.frequency(doc1.getTokens(), ref);
                     double idf = inverseDocFreq(ref);
@@ -581,31 +542,14 @@ public class VectorSpaceModel {
 
         double retval = 0;
 
-        retval = FastMath.toDegrees(FastMath.acos(scalar));
+        retval = Math.toDegrees(Math.acos(scalar));
 
         //System.out.println("Scalar " + scalar + " angle " + Math.acos(scalar) + " Sum doc1 " + sum_doc1 ) ;
         return retval;
 
     }
 
-    public BytesRef getReference(String token){
-        return new BytesRef(token);
-    }
 
-    public void printCollectionTerms(){
-        File file = new File(Paths.get("").toAbsolutePath().toString()+"\\collectionterms");
-        try {
-            file.createNewFile();
-            FileOutputStream os = new FileOutputStream(file);
-            for(BytesRef ref :collection_terms){
-                os.write(new String(ref + " string " + ref.utf8ToString() + "\n").getBytes());
-                os.flush();
-            }
-            os.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * The standard method call without setting the weightings for the relevant documents and the query.
@@ -784,14 +728,7 @@ public class VectorSpaceModel {
                 CategoryNode parent = new CategoryNode(cat_name, new ArrayList<>());
                 CategoryNode parent_in_map = categories.putIfAbsent(cat_name, parent);
 
-                if(parent_in_map != null){
-                    parent_in_map.addSubCategory(actual_node);
-                    actual_node.addParentCategory(parent_in_map);
-                }
-                else{
-                    parent.addSubCategory(actual_node);
-                    actual_node.addParentCategory(parent);
-                }
+                setSubCategories(actual_node, parent, parent_in_map);
             }
             if((i % modulo) == 0){
                 int val = prog_bar.getValue() + 2;
@@ -811,15 +748,20 @@ public class VectorSpaceModel {
                 CategoryNode sub_cat = categories.get(sub_category);
                 if (sub_cat == null)
                     sub_cat = new CategoryNode(sub_category, new ArrayList<>());
-                if (parent_in_map != null) {
-                    parent_in_map.addSubCategory(sub_cat);
-                    sub_cat.addParentCategory(parent_in_map);
-                } else {
-                    parent.addSubCategory(sub_cat);
-                    sub_cat.addParentCategory(parent);
-                }
+                setSubCategories(sub_cat, parent, parent_in_map);
             }
             k++;
+        }
+    }
+
+    private void setSubCategories(CategoryNode actual_node, CategoryNode parent, CategoryNode parent_in_map) {
+        if(parent_in_map != null){
+            parent_in_map.addSubCategory(actual_node);
+            actual_node.addParentCategory(parent_in_map);
+        }
+        else{
+            parent.addSubCategory(actual_node);
+            actual_node.addParentCategory(parent);
         }
     }
 
@@ -882,6 +824,11 @@ public class VectorSpaceModel {
         return  topics;
     }
 
+    /**
+     * This method implements the BM25 scoring method, which takes with respect to cosine similarity the
+     * length of the documents into account.
+     * @param query A Doc Object which contains the terms of the query.
+     */
     public void BM25Scoring(Doc query){
         ArrayList<BytesRef> query_terms = query.getTokens();
         double k = 1.2;

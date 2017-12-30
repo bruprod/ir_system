@@ -67,12 +67,12 @@ public class Main {
             }
         }
 
-        Indexer2 indexer2 = null;
+        Indexer indexer = null;
 
         try {
             long start = System.currentTimeMillis();
             if(!index)
-                indexer2 = new Indexer2(curr_path+"\\index");
+                indexer = new Indexer(curr_path+"\\index");
             else {
                 DefaultHandler xml_handler;
                 Path path = new File(Paths.get("").toAbsolutePath().toString() + "\\index").toPath();
@@ -84,8 +84,8 @@ public class Main {
                 if(handler_string.equals("Stackexchange"))
                     xml_handler = new StackExchangeHandler(writer);
                 else
-                    xml_handler = new XMLHandler(writer);
-                indexer2 = new Indexer2(path_string, xml_handler, writer);
+                    xml_handler = new WikipediaHandler(writer);
+                indexer = new Indexer(path_string, xml_handler, writer);
             }
 
             long end = System.currentTimeMillis();
@@ -103,7 +103,7 @@ public class Main {
             e.printStackTrace();
         }
 
-        VectorSpaceModel vs = new VectorSpaceModel(query, indexer2.getReader(), prog_bar);
+        VectorSpaceModel vs = new VectorSpaceModel(query, indexer.getReader(), prog_bar);
         prog_bar.setValue(50);
         vs.scoreDocs_cosine();
         prog_bar.setValue(75);

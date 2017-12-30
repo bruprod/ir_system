@@ -462,6 +462,7 @@ public class GUI {
                             try {
                                 query = (BooleanQuery) q_parser.parse(query_string);
                             } catch (ParseException e1) {
+                                System.out.println("Parsing Failed");
                             } catch (ClassCastException e2) {
                             } finally {
                                 System.out.println("query " + query + " tquery " + t_query);
@@ -531,6 +532,8 @@ public class GUI {
                         final String p_at_ten_str_bm25 = "Average Precision at Ten Cosine BM25";
                         final String avg_percentage_leaked_terms = "Average percentage of leaked terms";
                         final String percentage_leaked_terms_prf = "Percentage of leaked terms PRF";
+                        final String restricted_in_percent = "Restricted Documents in %";
+                        final String map_in_percent = "Mean Average Precision in %";
                         for (int i = 0; i < precisions.length; i++) {
                             ds.addValue(precisions_cosine[i] * 100, cos_str, x_axis[i] + "%");
                             ds.addValue(precisions[i] * 100, map_str, x_axis[i] + "%");
@@ -538,28 +541,22 @@ public class GUI {
                         }
 
                         createHistogramm(number_leaked_terms, null, x_axis, avg_percentage_leaked_terms, "", 1,
-                                "Restricted Documents in %", "Average Number leaked terms", "Number leaked Terms");
+                                restricted_in_percent, "Average Number leaked terms", "Number leaked Terms");
                         createHistogramm(percentage_leaked_terms, null, x_axis, percentage_leaked_terms_prf, "", 1,
-                                "Restricted Documents in %", "Percentage leaked Terms PRF", "Percentage leaked Terms PRF");
+                                restricted_in_percent, "Percentage leaked Terms PRF", percentage_leaked_terms_prf);
                         createHistogramm(p_at_ten_cos, p_at_ten_prf, x_axis, p_at_ten_str_cos,
-                                p_at_ten_str_prf, 1, "Restricted Documents in %", "Number Relevant Documents",
+                                p_at_ten_str_prf, 1, restricted_in_percent, "Number Relevant Documents",
                                 "Average Precision at result set size 10");
                         createHistogramm(p_at_ten_cos, p_at_ten_bm25, x_axis, p_at_ten_str_cos,
-                                p_at_ten_str_bm25, 1, "Restricted Documents in %", "Number Relevant Documents",
+                                p_at_ten_str_bm25, 1, restricted_in_percent, "Number Relevant Documents",
                                 "Average Precision at result set size 10 BM25");
                         createHistogramm(precisions_cosine, precisions_bm25, x_axis, "MAP Cosine Similarity",
-                                "MAP BM25", 1, "Restricted Documents in %", "Mean Average Precision in %",
+                                bm25_str, 100, restricted_in_percent, map_in_percent,
                                 "Cosine Similarity vs BM25");
                         JFreeChart chart = ChartFactory.createBarChart("Mean Average Precision Cosine similarity vs PRF"
-                                , "Restricted Documents in %", "Mean Average Precision in %",
+                                , restricted_in_percent, map_in_percent,
                                 ds, PlotOrientation.VERTICAL, true, true, false);
-                        if(!suppress_histograms) {
-                            ChartPanel pan = new ChartPanel(chart);
-                            frame.setContentPane(pan);
-                            frame.setSize(new Dimension(width, height));
-                            frame.setVisible(true);
-                            frame.setLocationRelativeTo(null);
-                        }
+                        showHistograms(frame, chart);
                         String chart_name = "cos_vs_prf";
                         saveAsChartAsPng(chart, chart_name);
 
@@ -572,6 +569,16 @@ public class GUI {
         };
         evaluate.addActionListener(al);
         return al;
+    }
+
+    private void showHistograms(JFrame frame, JFreeChart chart) {
+        if(!suppress_histograms) {
+            ChartPanel pan = new ChartPanel(chart);
+            frame.setContentPane(pan);
+            frame.setSize(new Dimension(width, height));
+            frame.setVisible(true);
+            frame.setLocationRelativeTo(null);
+        }
     }
 
     public void createHistogramm(double[] first_arr, double[] second_arr, double[] x_axis,
@@ -592,13 +599,7 @@ public class GUI {
                 , x_axis_name, y_axis_name,
                 ds, PlotOrientation.VERTICAL, true, true, false);
         saveAsChartAsPng(chart, histogram_name);
-        if(!suppress_histograms) {
-            ChartPanel pan = new ChartPanel(chart);
-            frame.setContentPane(pan);
-            frame.setSize(new Dimension(width, height));
-            frame.setVisible(true);
-            frame.setLocationRelativeTo(null);
-        }
+        showHistograms(frame, chart);
     }
 
     public void saveAsChartAsPng(JFreeChart chart, String chart_title){
@@ -654,11 +655,11 @@ public class GUI {
                     IndexWriter writer = new IndexWriter(dir, conf);
                     DefaultHandler handler;
                     if(((String)cb.getSelectedItem()).equals("Wikipedia"))
-                        handler = new XMLHandler(writer);
+                        handler = new WikipediaHandler(writer);
                     else
                         handler = new StackExchangeHandler(writer);
 
-                    Indexer2 indexer = new Indexer2(index_path,handler, writer);
+                    Indexer indexer = new Indexer(index_path,handler, writer);
                     QueryParser q_parser = new QueryParser("content", new StandardAnalyzer());
                     BooleanQuery query = null;
                     TermQuery t_query = null;

@@ -13,8 +13,6 @@ public class Topic {
     double avg_improvement = 0;
     double precision = 0.0;
     double recall = 0.0;
-    double precision_cosine_sim = 0.0;
-    double recall_cosine_sim = 0.0;
     static int NUMBER_SAMPLES_PER_RESTRICTION = 1;
     double percentage_progbar;
     JProgressBar prog_bar;
@@ -110,18 +108,14 @@ public class Topic {
             double sum_precision_map_bm25 = 0;
             for (int i = 0; i < NUMBER_SAMPLES_PER_RESTRICTION; i++) {
                 ArrayList<Doc> result_set = new ArrayList<>();
+
                 vs.scoreDocs_cosine(true);
-                resultset_size = vs.getDocs().size();
-                //retrieveResultSet(vs.getDocs(), result_set, resultset_size);
-                //calcPrecisionAndRecall(result_set);
                 precision_at_ten_cos.add(precisionAtTen(vs.getResultSet()));
-                sum_precision_cosine_sim += precision_cosine_sim;
-                //sum_recall_cosine_sim += recall_cosine_sim;
                 result_set = vs.getResultSet();
                 LeakageHeuristics leakage = new LeakageHeuristics();
                 sum_precision_map_cosine += calculatingAveragePrecision(result_set) / NUMBER_SAMPLES_PER_RESTRICTION;
                 ArrayList<Doc> result_set_cosine = new ArrayList<>();
-                retrieveResultSet(result_set, result_set_cosine, 10);
+                retrieveResultSet(result_set, result_set_cosine, resultset_size);
 
                 vs.PseudoRelevanceFeedbackRocchio(number_top_ranked, vs.getQueryDoc());
                 result_set.clear();
@@ -129,14 +123,12 @@ public class Topic {
                 getPrecision_at_ten_prf.add(precisionAtTen(result_set));
 
                 ArrayList<Doc> result_set_prf = new ArrayList<>();
-                retrieveResultSet(result_set, result_set_prf, 10);
+                retrieveResultSet(result_set, result_set_prf, resultset_size);
                 leakage.setResultSets(result_set_cosine, result_set_prf);
                 leakage.retrieveLeakedTerms();
                 HashSet<String> leaked_terms = leakage.getLeakedTerms();
                 avg_number_leaked_terms.add(leaked_terms.size());
                 percentage_leaked_terms.add(leakage.getLeakedTermsPercentage());
-                //System.out.println(leaked_terms.size() + " " + leakage.getLeakedTermsPercentage());
-                //retrieveResultSet(vs.getDocs(), result_set, resultset_size);
                 sum_precision_map_prf += calculatingAveragePrecision(result_set) / NUMBER_SAMPLES_PER_RESTRICTION;
 
                 vs.BM25Scoring(vs.getQueryDoc());
@@ -145,21 +137,13 @@ public class Topic {
                 getPrecision_at_ten_bm25.add(precisionAtTen(result_set));
 
                 ArrayList<Doc> result_set_bm25 = new ArrayList<>();
-                retrieveResultSet(result_set, result_set_bm25, 10);
+                retrieveResultSet(result_set, result_set_bm25, resultset_size);
                 leakage.setResultSets(result_set_cosine, result_set_bm25);
                 leakage.retrieveLeakedTerms();
                 HashSet<String> leaked_terms_bm25 = leakage.getLeakedTerms();
                 avg_number_leaked_terms_bm25.add(leaked_terms_bm25.size());
-
-                //retrieveResultSet(vs.getDocs(), result_set, resultset_size);
                 sum_precision_map_bm25 += calculatingAveragePrecision(result_set) / NUMBER_SAMPLES_PER_RESTRICTION;
 
-
-
-                //calcPrecisionAndRecall(result_set);
-                sum_precision += getPrecision();
-                sum_recall += getRecall();
-                //System.out.println("Precision: " + getPrecision());
                 progress_counter += progress;
                 prog_bar.setValue((int) progress_counter);
                 prog_bar.setString(String.format("%.2f", progress_counter) + "%");
@@ -175,13 +159,11 @@ public class Topic {
                 avg_precisions_map_bm25.add(sum_precision_map_bm25);
 
         }
-        /*System.out.println("AVG Precision: " + avg_precisions );
-        System.out.println("AVG Recall: " + avg_recall);
-        System.out.println("AVG Precision: " +avg_precisions_cosine);*/
         vs.resetDocs(true);
         System.gc();
-        System.out.println("AVG Precision MAP cosine: " + avg_precisions_map_cosine);
-        System.out.println("AVG Precision MAP prf: " + avg_precisions_map_prf);
+        System.out.println("AVG Precision MAP COSINE: " + avg_precisions_map_cosine);
+        System.out.println("AVG Precision MAP PRF: " + avg_precisions_map_prf);
+        System.out.println("AVG Precision MAP BM25: " + avg_precisions_map_bm25);
     }
 
     /**Old Function which should calculate the average over all ranks from the set of relevant documents.
@@ -378,8 +360,12 @@ public class Topic {
     public void setTopicRelevantDocsStackexchange(Doc doc){
         topic_relevant_docs_stackexchange.add(doc);
     }
+
     public HashSet<Doc> getTopicRelevantDocsStackexchange(){
         return topic_relevant_docs_stackexchange;
     }
+
     public ArrayList<Double> getPercentageLeakedTerms(){return percentage_leaked_terms;}
+
+
 }

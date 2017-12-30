@@ -14,7 +14,7 @@ import java.util.ArrayList;
  * Created by Andreas.
  */
 
-public class XMLHandler extends DefaultHandler {
+public class WikipediaHandler extends DefaultHandler {
     int id = 0;
     WikiPage wiki_page;
     final String title = "title";
@@ -30,7 +30,7 @@ public class XMLHandler extends DefaultHandler {
      * Sets the IndexWriter
      * @param writer The IndexWriter for building the Index
      */
-    public XMLHandler(IndexWriter writer){
+    public WikipediaHandler(IndexWriter writer){
         this.writer = writer;
     }
 

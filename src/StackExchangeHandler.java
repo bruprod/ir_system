@@ -104,7 +104,7 @@ public class StackExchangeHandler extends DefaultHandler {
         }
         id++;
         if((id % 10000) == 0)
-        System.out.println("Indexed doc: " + id);
+            System.out.println("Indexed doc: " + id);
     }
 
     /**
