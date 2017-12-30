@@ -42,6 +42,7 @@ public class VectorSpaceModel {
     String content = "content";
     HashMap<String, Topic> tag_to_topic = new HashMap<>();
     HashMap<String, String> co_occurrences = new HashMap<>();
+    final int NUMBER_OF_TERMS_FOR_EXTENSION = 5;
     int amount_restricted = 0;
     int number_docs;
     int number_terms = 0;
@@ -557,19 +558,22 @@ public class VectorSpaceModel {
      */
     public void PseudoRelevanceFeedbackRocchio(int number_top_ranked, Doc query, double alpha, double beta, double gamma){
 
-        Doc[] top_scored_docs = new Doc[number_top_ranked];
         if(number_top_ranked > docs.size())
-            return;
+            number_top_ranked = docs.size();
+        Doc[] top_scored_docs = new Doc[number_top_ranked];
+
 
         for(int i = 0; i < number_top_ranked; i++)
             top_scored_docs[i] = docs.get(i);
 
         HashMap<String, Double> tfidf_query = new HashMap<>();
+        HashMap<String, Double> expansion_terms = new HashMap<>();
 
         for (BytesRef term : query.getTokens()) {
             int freq = Collections.frequency(query.getTokens(), term);
             double idf = inverseDocFreq(term);
-            tfidf_query.put(terms_string_map.get(term), freq * idf * alpha);
+            //tfidf_query.put(terms_string_map.get(term), freq * idf * alpha);
+            expansion_terms.put(terms_string_map.get(term), freq * idf * alpha);
         }
 
         TermsEnum te = null;
@@ -628,9 +632,23 @@ public class VectorSpaceModel {
             }
 
         }
-        //System.out.println(tfidf_query);
-        query.setTfidfVector(tfidf_query);
 
+        ArrayList<Double> highest_values = new ArrayList<>(tfidf_query.values());
+        Collections.sort(highest_values, Collections.reverseOrder());
+
+        for(int i = 0; (i < highest_values.size()) && (i < NUMBER_OF_TERMS_FOR_EXTENSION); i++){
+            double value = highest_values.get(i);
+            for(String key : tfidf_query.keySet()){
+                if(tfidf_query.get(key) == value){
+                    expansion_terms.put(key, value);
+                }
+            }
+        }
+
+        //System.out.println("expansion terms " + expansion_terms.toString());
+
+        query.setTfidfVector(expansion_terms);
+        //System.out.println("docs" + docs.toString());
         for(int i = 0; i < docs.size(); i++) {
             Doc doc = docs.get(i);
             doc.setScore(cosine_similarity(query, doc));

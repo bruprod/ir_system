@@ -166,8 +166,8 @@ public class Topic {
         System.out.println("AVG Precision MAP BM25: " + avg_precisions_map_bm25);
     }
 
-    /**Old Function which should calculate the average over all ranks from the set of relevant documents.
-     *
+    /**
+     * Old Function which should calculate the average over all ranks from the set of relevant documents.
      */
     public void calcAverageRanks() {
         int sum_difference = 0;
