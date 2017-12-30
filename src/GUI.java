@@ -63,6 +63,7 @@ public class GUI {
     boolean suppress_histograms = false;
     Thread evaluation_thread;
     boolean co_occurrence_enabled = false;
+    final String content = "content";
 
 
     VectorSpaceModel vs;
@@ -279,21 +280,6 @@ public class GUI {
                                     results_without_restricted.add(doc);
                                 }
                             }
-
-                            Topic topic;
-                            /*if (t_query != null) {
-                                topic = new Topic(t_query.getTerm().text());
-                                topic.retrieveTopicRelevantDocs(vs.getDocuments());
-                                topic.calcAverageRanks();
-                                topic.calcPrecisionAndRecall(results_without_restricted);
-                                System.out.println("Topic: " + topic.getTopicName() + " AVG improvement: "
-                                        + topic.getAvgImprovement());
-                                System.out.println("Topic: " + topic.getTopicName()
-                                        + " Precision: " + topic.getPrecision() + " Recall: " + topic.getRecall());
-
-                                topic.evaluateTopic(vs, PRF_NUMBER_TOP_RANKED);
-
-                            }*/
                             int table_size = docs.size() - number_restricted_docs;
                             Object[][] table_data = new Object[table_size][2];
                             int i = 0;
@@ -301,15 +287,6 @@ public class GUI {
                             System.out.println("sorting done");
                             for (Doc doc : docs) {
                                 String result_string = null;
-                                /*if(doc.isRestricted())
-                                    result_string = "(RESTRICTED)Document " + doc.getDocId() + " " + doc.getTitle()
-                                            + " with score " + doc.getScore() ;
-                                else
-                                    result_string  = "Document " + doc.getDocId() + " " + doc.getTitle() + " with score " + doc.getScore();
-
-                                table_data[i][0] = result_string;
-                                table_data[i][1] = doc;
-                                i++;*/
                                 if (!doc.isRestricted()) {
                                     result_string = "Document " + doc.getDocId() + " " + doc.getTitle() + " with score " + doc.getScore();
                                     table_data[i][0] = result_string;
@@ -458,7 +435,7 @@ public class GUI {
                             QueryParser q_parser = new QueryParser("content", new StandardAnalyzer());
                             String query_string = topic_name;
                             if(stackexchange && co_occurrence_enabled)
-                                query_string += " " + vs.getCo_occurrences().get(topic_name);
+                                query_string += " " + vs.getCoOccurrences().get(topic_name);
                             try {
                                 query = (BooleanQuery) q_parser.parse(query_string);
                             } catch (ParseException e1) {
@@ -492,74 +469,7 @@ public class GUI {
                         }
                         long end = System.currentTimeMillis();
                         System.out.println("Evaluation took: " + (((end - begin) / 1000.0) + ((end - begin) % 1000) / 1000.0) + "s");
-                        JFrame frame = new JFrame();
-                        int size = 10;
-                        double[] precisions = new double[size];
-                        double[] precisions_cosine = new double[size];
-                        double[] precisions_bm25 = new double[size];
-                        double[] x_axis = new double[size];
-                        double[] p_at_ten_cos = new double[size];
-                        double[] p_at_ten_prf = new double[size];
-                        double[] p_at_ten_bm25 = new double[size];
-                        double[] number_leaked_terms = new double[size];
-                        double[] number_leaked_terms_bm25 = new double[size];
-                        double[] percentage_leaked_terms = new double[size];
-
-                        DefaultCategoryDataset ds = new DefaultCategoryDataset();
-                        DefaultCategoryDataset p_at_ten_ds = new DefaultCategoryDataset();
-                        double[] x_axis_p_at_ten = {10, 20, 30, 40, 50};
-                        for (Topic topic : topic_list) {
-                            for (int i = 0; i < topic.getAvgRecall().size(); i++) {
-                                precisions[i] += topic.getAvgPrecisionsMapPRF().get(i) / topic_list.size();
-                                precisions_cosine[i] += topic.getAvgPrecisionsMapCosine().get(i) / topic_list.size();
-                                precisions_bm25[i] += topic.getAvg_precisions_map_bm25().get(i) / topic_list.size();
-                                p_at_ten_cos[i] += topic.getPrecisionAtTenCos().get(i) / (double)topic_list.size();
-                                p_at_ten_prf[i] += topic.getGetPrecisionAtTenPrf().get(i) / (double)topic_list.size();
-                                p_at_ten_bm25[i] += topic.getGetPrecision_at_ten_bm25().get(i)  / (double)topic_list.size();
-                                x_axis[i] = i * 10;
-                                number_leaked_terms[i] += topic.getAvgNumberLeakedTerms().get(i) / topic_list.size();
-                                number_leaked_terms_bm25[i] += topic.getAvg_number_leaked_terms_bm25().get(i) / topic_list.size();
-                                percentage_leaked_terms[i] += topic.getPercentageLeakedTerms().get(i) *100 / topic_list.size();
-                            }
-                        }
-                        System.out.println("Precision at ten cos: " + p_at_ten_cos);
-                        System.out.println("Precision at ten prf: " + p_at_ten_prf);
-                        final String map_str = "Mean average Precision PRF";
-                        final String bm25_str = "Mean average Precision BM25";
-                        final String cos_str = "Mean average Precision Cosine Similarity";
-                        final String p_at_ten_str_cos = "Average Precision at Ten Cosine Similarity";
-                        final String p_at_ten_str_prf = "Average Precision at Ten Cosine PRF";
-                        final String p_at_ten_str_bm25 = "Average Precision at Ten Cosine BM25";
-                        final String avg_percentage_leaked_terms = "Average percentage of leaked terms";
-                        final String percentage_leaked_terms_prf = "Percentage of leaked terms PRF";
-                        final String restricted_in_percent = "Restricted Documents in %";
-                        final String map_in_percent = "Mean Average Precision in %";
-                        for (int i = 0; i < precisions.length; i++) {
-                            ds.addValue(precisions_cosine[i] * 100, cos_str, x_axis[i] + "%");
-                            ds.addValue(precisions[i] * 100, map_str, x_axis[i] + "%");
-
-                        }
-
-                        createHistogramm(number_leaked_terms, null, x_axis, avg_percentage_leaked_terms, "", 1,
-                                restricted_in_percent, "Average Number leaked terms", "Number leaked Terms");
-                        createHistogramm(percentage_leaked_terms, null, x_axis, percentage_leaked_terms_prf, "", 1,
-                                restricted_in_percent, "Percentage leaked Terms PRF", percentage_leaked_terms_prf);
-                        createHistogramm(p_at_ten_cos, p_at_ten_prf, x_axis, p_at_ten_str_cos,
-                                p_at_ten_str_prf, 1, restricted_in_percent, "Number Relevant Documents",
-                                "Average Precision at result set size 10");
-                        createHistogramm(p_at_ten_cos, p_at_ten_bm25, x_axis, p_at_ten_str_cos,
-                                p_at_ten_str_bm25, 1, restricted_in_percent, "Number Relevant Documents",
-                                "Average Precision at result set size 10 BM25");
-                        createHistogramm(precisions_cosine, precisions_bm25, x_axis, "MAP Cosine Similarity",
-                                bm25_str, 100, restricted_in_percent, map_in_percent,
-                                "Cosine Similarity vs BM25");
-                        JFreeChart chart = ChartFactory.createBarChart("Mean Average Precision Cosine similarity vs PRF"
-                                , restricted_in_percent, map_in_percent,
-                                ds, PlotOrientation.VERTICAL, true, true, false);
-                        showHistograms(frame, chart);
-                        String chart_name = "cos_vs_prf";
-                        saveAsChartAsPng(chart, chart_name);
-
+                        visualizeEvaluation(topic_list);
                         progbar_frame.dispose();
                     }
                 };
@@ -571,6 +481,12 @@ public class GUI {
         return al;
     }
 
+    /**
+     * Shows the histograms or not in a frame after evaluation, depending on the suppress-histograms flag set.
+     * Default value is false, so on default the histograms are shown.
+     * @param frame This is the frame in which the histograms are shown
+     * @param chart This is the chart in which contains the values corresponding the histograms
+     */
     private void showHistograms(JFrame frame, JFreeChart chart) {
         if(!suppress_histograms) {
             ChartPanel pan = new ChartPanel(chart);
@@ -581,6 +497,18 @@ public class GUI {
         }
     }
 
+    /**
+     * Method to create histograms with 1 or 2 bars.
+     * @param first_arr Array containing the values for the first part of the bars
+     * @param second_arr Array containing the values for the second part of the bars or null
+     * @param x_axis Containing the values which should be shown on the x-axis
+     * @param first_name The name of the values of the first array
+     * @param second_name The name of the values of the second array
+     * @param scale The scale which should be used on the values
+     * @param x_axis_name This variable contains the name of the x-axis
+     * @param y_axis_name This variable contains the name of the y-axis
+     * @param histogram_name This variable contains the name of the histogram itself
+     */
     public void createHistogramm(double[] first_arr, double[] second_arr, double[] x_axis,
                                  String first_name, String second_name, double scale,
                                  String x_axis_name, String y_axis_name, String histogram_name){
@@ -601,6 +529,13 @@ public class GUI {
         saveAsChartAsPng(chart, histogram_name);
         showHistograms(frame, chart);
     }
+
+    /**
+     * Method to save a chart in as PNG-Image in the evaluation folder. If the evaluation folder exists the images
+     * are saved in the folder, otherwise the folder is created beforehand.
+     * @param chart The variable containing the chart, which has the evaluation data.
+     * @param chart_title This parameter contains the chart title.
+     */
 
     public void saveAsChartAsPng(JFreeChart chart, String chart_title){
         try {
@@ -624,6 +559,9 @@ public class GUI {
         }
     }
 
+    /**
+     * This method opens a File-Selection dialog, to choose a file for Indexing.
+     */
     public void addChooseFileListener(){
         search_doc_collection.addActionListener(new ActionListener() {
             @Override
@@ -638,6 +576,9 @@ public class GUI {
         });
     }
 
+    /**
+     * This method starts the indexing process, when a file and the correct XML-Handler is chosen.
+     */
     public void addIndexClickListener(){
         index_docs.addActionListener(new ActionListener() {
             @Override
@@ -654,7 +595,7 @@ public class GUI {
                     conf.setRAMBufferSizeMB(1024);
                     IndexWriter writer = new IndexWriter(dir, conf);
                     DefaultHandler handler;
-                    if(((String)cb.getSelectedItem()).equals("Wikipedia"))
+                    if(cb.getSelectedItem().equals("Wikipedia"))
                         handler = new WikipediaHandler(writer);
                     else
                         handler = new StackExchangeHandler(writer);
@@ -665,12 +606,10 @@ public class GUI {
                     TermQuery t_query = null;
                     try {
                         query = (BooleanQuery) q_parser.parse("how do you");
-                    } catch (ParseException e1) {
+                    } catch (ParseException | ClassCastException e1) {
                         e1.printStackTrace();
-                    } catch (ClassCastException e2) {
-                        e2.printStackTrace();
-                    }finally {
-                        vs = new VectorSpaceModel(query, indexer.getReader(), new JProgressBar());
+                    } finally {
+                            vs = new VectorSpaceModel(query, indexer.getReader(), new JProgressBar());
                     }
 
 
@@ -681,20 +620,109 @@ public class GUI {
         });
     }
 
+    /**
+     * @return Returns the ActionListener implemented for the Click on the Evaluate button.
+     */
     public ActionListener getEvaluateListener() {
         return evaluate_listener;
     }
 
+    /**
+     * Sets the prefix for the histograms, which can be set as commandline flag.
+     * @param prefix The string prefix, which is concatenated on front of the folder created for the evaluation.
+     */
     public void setHistogramPrefix(String prefix){
         histogram_prefix = prefix;
         if(histogram_prefix.length() > 0)
             histogram_prefix += "_";
     }
 
+    /**
+     * @param suppress Contains the boolean, which tells if the histograms should be displayed or not
+     */
     public void setSuppressHistograms(boolean suppress){
         suppress_histograms = suppress;
     }
+
+    /**
+     * @return Returns the thread in which the evaluation is calculated.
+     */
     public Thread getEvaluationThread(){
         return evaluation_thread;
+    }
+
+    /**
+     * Method to visualize the evaluation, which is has been processed beforehand.
+     * @param topic_list The list of topics for which the evaluation took place.
+     */
+    private void visualizeEvaluation(ArrayList<Topic> topic_list){
+        JFrame frame = new JFrame();
+        int size = 10;
+        double[] precisions = new double[size];
+        double[] precisions_cosine = new double[size];
+        double[] precisions_bm25 = new double[size];
+        double[] x_axis = new double[size];
+        double[] p_at_ten_cos = new double[size];
+        double[] p_at_ten_prf = new double[size];
+        double[] p_at_ten_bm25 = new double[size];
+        double[] number_leaked_terms = new double[size];
+        double[] number_leaked_terms_bm25 = new double[size];
+        double[] percentage_leaked_terms = new double[size];
+
+        DefaultCategoryDataset ds = new DefaultCategoryDataset();
+        DefaultCategoryDataset p_at_ten_ds = new DefaultCategoryDataset();
+        double[] x_axis_p_at_ten = {10, 20, 30, 40, 50};
+        for (Topic topic : topic_list) {
+            for (int i = 0; i < topic.getAvgRecall().size(); i++) {
+                precisions[i] += topic.getAvgPrecisionsMapPRF().get(i) / topic_list.size();
+                precisions_cosine[i] += topic.getAvgPrecisionsMapCosine().get(i) / topic_list.size();
+                precisions_bm25[i] += topic.getAvg_precisions_map_bm25().get(i) / topic_list.size();
+                p_at_ten_cos[i] += topic.getPrecisionAtTenCos().get(i) / (double)topic_list.size();
+                p_at_ten_prf[i] += topic.getGetPrecisionAtTenPrf().get(i) / (double)topic_list.size();
+                p_at_ten_bm25[i] += topic.getGetPrecision_at_ten_bm25().get(i)  / (double)topic_list.size();
+                x_axis[i] = i * 10;
+                number_leaked_terms[i] += topic.getAvgNumberLeakedTerms().get(i) / topic_list.size();
+                number_leaked_terms_bm25[i] += topic.getAvg_number_leaked_terms_bm25().get(i) / topic_list.size();
+                percentage_leaked_terms[i] += topic.getPercentageLeakedTerms().get(i) *100 / topic_list.size();
+            }
+        }
+        System.out.println("Precision at ten cos: " + p_at_ten_cos);
+        System.out.println("Precision at ten prf: " + p_at_ten_prf);
+        final String map_str = "Mean average Precision PRF";
+        final String bm25_str = "Mean average Precision BM25";
+        final String cos_str = "Mean average Precision Cosine Similarity";
+        final String p_at_ten_str_cos = "Average Precision at Ten Cosine Similarity";
+        final String p_at_ten_str_prf = "Average Precision at Ten Cosine PRF";
+        final String p_at_ten_str_bm25 = "Average Precision at Ten Cosine BM25";
+        final String avg_percentage_leaked_terms = "Average percentage of leaked terms";
+        final String percentage_leaked_terms_prf = "Percentage of leaked terms PRF";
+        final String restricted_in_percent = "Restricted Documents in %";
+        final String map_in_percent = "Mean Average Precision in %";
+        for (int i = 0; i < precisions.length; i++) {
+            ds.addValue(precisions_cosine[i] * 100, cos_str, x_axis[i] + "%");
+            ds.addValue(precisions[i] * 100, map_str, x_axis[i] + "%");
+
+        }
+
+        createHistogramm(number_leaked_terms, null, x_axis, avg_percentage_leaked_terms, "", 1,
+                restricted_in_percent, "Average Number leaked terms", "Number leaked Terms");
+        createHistogramm(percentage_leaked_terms, null, x_axis, percentage_leaked_terms_prf, "", 1,
+                restricted_in_percent, "Percentage leaked Terms PRF", percentage_leaked_terms_prf);
+        createHistogramm(p_at_ten_cos, p_at_ten_prf, x_axis, p_at_ten_str_cos,
+                p_at_ten_str_prf, 1, restricted_in_percent, "Number Relevant Documents",
+                "Average Precision at result set size 10");
+        createHistogramm(p_at_ten_cos, p_at_ten_bm25, x_axis, p_at_ten_str_cos,
+                p_at_ten_str_bm25, 1, restricted_in_percent, "Number Relevant Documents",
+                "Average Precision at result set size 10 BM25");
+        createHistogramm(precisions_cosine, precisions_bm25, x_axis, "MAP Cosine Similarity",
+                bm25_str, 100, restricted_in_percent, map_in_percent,
+                "Cosine Similarity vs BM25");
+        JFreeChart chart = ChartFactory.createBarChart("Mean Average Precision Cosine similarity vs PRF"
+                , restricted_in_percent, map_in_percent,
+                ds, PlotOrientation.VERTICAL, true, true, false);
+        showHistograms(frame, chart);
+        String chart_name = "cos_vs_prf";
+        saveAsChartAsPng(chart, chart_name);
+
     }
 }

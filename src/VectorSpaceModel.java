@@ -63,30 +63,16 @@ public class VectorSpaceModel {
         number_docs = reader.maxDoc();
         TermsEnum coll_terms_enum = null;
 
-        /*for(int i = 10; i < 100;i += 10 ){
-            Random rand_gen = new Random(seeds[i/10]);
-            int doc_count = 0;
-            int restricted_docs = number_docs / i;
-            HashSet<Integer> already_drawn = new HashSet<>();
-            ArrayList<Integer> restricted_docs_list = new ArrayList<>();
-            while(doc_count < restricted_docs){
-                int rand_num = rand_gen.nextInt(number_docs);
-                if(!already_drawn.contains(rand_num)){
-                    restricted_docs_list.add(rand_num);
-                    already_drawn.add(rand_num);
-                    doc_count++;
-                }
-            }
-            docs_restricted.add(restricted_docs_list);
-        }*/
-
-        //System.out.println(docs_restricted.get(0));
-
         try {
 
             BytesRef ref = null;
             if(getTerms(reader, content) != null)
                 coll_terms_enum = getTerms(reader, content).iterator();
+            else {
+                JOptionPane.showMessageDialog(null, "Error in Index! Please Index Again! " +
+                        "Maybe False XML-Handler used.", "Index error!", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
             while((ref = coll_terms_enum.next()) != null){
                 BytesRef save = new BytesRef(ref.utf8ToString());
                 //collection_terms.add(save);
@@ -754,6 +740,13 @@ public class VectorSpaceModel {
         }
     }
 
+    /**
+     * Setting the subcategories to a CategoryNode. If node exists in map than subcategory is inserted, otherwise the
+     * CategoryNode is created beforehand.
+     * @param actual_node The actual node which is processed and which is added as subcategory
+     * @param parent The parent node which is newly created.
+     * @param parent_in_map The parent node retrieved from the map, null if not in map.
+     */
     private void setSubCategories(CategoryNode actual_node, CategoryNode parent, CategoryNode parent_in_map) {
         if(parent_in_map != null){
             parent_in_map.addSubCategory(actual_node);
@@ -885,7 +878,10 @@ public class VectorSpaceModel {
 
     }
 
-    public HashMap<String, String> getCo_occurrences() {
+    /**
+     * @return Returns the Hashmap containing the co-occurrences to a tag.
+     */
+    public HashMap<String, String> getCoOccurrences() {
         return co_occurrences;
     }
 }
