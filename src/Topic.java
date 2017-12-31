@@ -331,6 +331,12 @@ public class Topic {
         return avg_precisions_map_prf;
     }
 
+    /**
+     * Caluculates the precision at a result set size of ten. Which displays the number of relevant
+     * documents in the current ranking step.
+     * @param resultset Contains the whole result set retrieved from the used ranking method.
+     * @return Returns the number of relevant documents in the given result set.
+     */
     public int precisionAtTen(ArrayList<Doc> resultset){
         ArrayList<Doc> top_10_docs = new ArrayList<>();
         int result_set_size = 10;
@@ -345,27 +351,47 @@ public class Topic {
 
     }
 
+    /**
+     * @return Returns a ArrayList with the average number of relevant documents, with a result set size of 10 for
+     * the cosine similarity ranking.
+     */
     public ArrayList<Integer> getPrecisionAtTenCos() {
         return precision_at_ten_cos;
     }
 
+    /**
+     * @return Returns a ArrayList with the average number of relevant documents, with a result set size of 10 for
+     * pseudo relevance feedback.
+     */
     public ArrayList<Integer> getGetPrecisionAtTenPrf() {
         return getPrecision_at_ten_prf;
     }
 
+    /**
+     * @return Returns the average number of leaked terms.
+     */
     public ArrayList<Integer> getAvgNumberLeakedTerms() {
         return avg_number_leaked_terms;
     }
 
+    /**
+     * Sets the topic relevant documents when a StackExchange corpus is used.
+     * @param doc The Doc object, which should be added to the relevant documents for the topics.
+     */
     public void setTopicRelevantDocsStackexchange(Doc doc){
         topic_relevant_docs_stackexchange.add(doc);
     }
 
+    /**
+     * @return Returns the HashSet of Doc objects, which are relevant for the topic.
+     */
     public HashSet<Doc> getTopicRelevantDocsStackexchange(){
         return topic_relevant_docs_stackexchange;
     }
 
+    /**
+     * @return Returns the ArrayList which contains the percent values of leaked terms
+     * after using pseudo relevance feedback.
+     */
     public ArrayList<Double> getPercentageLeakedTerms(){return percentage_leaked_terms;}
-
-
 }

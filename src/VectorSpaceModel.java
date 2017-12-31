@@ -42,7 +42,7 @@ public class VectorSpaceModel {
     String content = "content";
     HashMap<String, Topic> tag_to_topic = new HashMap<>();
     HashMap<String, String> co_occurrences = new HashMap<>();
-    final int NUMBER_OF_TERMS_FOR_EXTENSION = 5;
+    final int NUMBER_OF_TERMS_FOR_EXTENSION = 3;
     int amount_restricted = 0;
     int number_docs;
     int number_terms = 0;
