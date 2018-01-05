@@ -301,8 +301,6 @@ public class Topic {
             if(relevant_docs.contains(doc)) {
                 rel_docs_retrieved++;
                 double precision = (double) rel_docs_retrieved / (i+1);
-                //double recall = (double) rel_docs_retrieved / relevant_docs.size();
-
                 precision_points.add(precision);
             }
         }
@@ -312,7 +310,6 @@ public class Topic {
         }
         int size = (precision_points.size() > 0) ? precision_points.size() : 1;
         return sum_precision_points / size;
-
     }
 
     /**
@@ -348,7 +345,6 @@ public class Topic {
             }
         }
         return relevant_count;
-
     }
 
     /**

@@ -46,17 +46,12 @@ public class LeakageHeuristics {
         HashSet<String> intersection = new HashSet<>();
         union.addAll(terms_cosine);
         union.addAll(terms_prf);
-        //System.out.println("Number Terms union "  + union.size());
         intersection.addAll(terms_cosine);
         intersection.retainAll(terms_prf);
         union.removeAll(intersection);
         union.removeAll(terms_cosine);
         leaked_terms = union;
-
         leaked_terms_percentage = leaked_terms.size() / (union.size()+0.00001);
-        /*System.out.println("Number Terms intersection "  + intersection.size());
-        System.out.println("Number Terms cosine sim: " + terms_cosine.size());
-        System.out.println("Number Terms prf: " + terms_prf.size());*/
     }
 
     public double getLeakedTermsPercentage() {

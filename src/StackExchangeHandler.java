@@ -23,7 +23,6 @@ public class StackExchangeHandler extends DefaultHandler {
     final String Title = "Title";
     final String body = "Body";
     HashMap<String, HashMap<String, Integer>> co_occurrences = new HashMap<>();
-    String node_content;
     IndexWriter writer;
 
     /**

@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 
 /**
- * Created by Andreas on 06.08.2017.
+ * Created by Andreas.
  */
 public class WikiPage {
     String content = new String();

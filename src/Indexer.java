@@ -31,6 +31,13 @@ public class Indexer {
     IndexReader reader;
     DefaultHandler handler;
 
+    /**
+     * The constructor for the Indexer class for indexing corporas during runtime of the Information Retrieval System.
+     * @param path This parameter contains the path to the file which should be indexed.
+     * @param handler This Parameter contains the XML-Handler which is used for parsing.
+     * @param writer The IndexWriter, which is responsible for writing to the index of the Information Retrieval System.
+     * @throws IOException Throws an IOException if any error occurs while parsing.
+     */
     public Indexer(String path, DefaultHandler handler, IndexWriter writer) throws IOException {
         try {
             index_path = new File(Paths.get("").toAbsolutePath().toString() + "\\index").toPath();
@@ -42,6 +49,7 @@ public class Indexer {
         FileInputStream is = null;
         try {
             is = new FileInputStream(path);
+
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -51,7 +59,6 @@ public class Indexer {
             doc_builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             System.out.println("Start parsing");
             long start = System.currentTimeMillis();
-
             SAXParserFactory factory = SAXParserFactory.newInstance();
             factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, false);
             SAXParser parser = factory.newSAXParser();
@@ -63,27 +70,24 @@ public class Indexer {
             long end = System.currentTimeMillis();
             System.out.println("Parsing took " + (end - start) / 1000 + "." + (end - start) % 1000 + " seconds");
             System.out.println(" Sax Parser done");
-            //xml_document = doc_builder.parse(in_source);
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
-        //extractDocuments();
         try {
             writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
         reader = DirectoryReader.open(dir);
         System.out.println("Indexing done");
-
     }
 
+    /**
+     * The Indexer used before initializing the vector space model. Runs only if new index is already written, with the
+     * small artificial intelligence StackExchange corpus.
+     * @param path
+     * @throws IOException Throws an IOException if any error occurs while parsing.
+     */
     public Indexer(String path) throws IOException {
         try {
             index_path = new File(Paths.get("").toAbsolutePath().toString() + "\\index").toPath();
@@ -96,7 +100,7 @@ public class Indexer {
         try {
              is = new FileInputStream(new File(Paths.get("").toAbsolutePath().toString()+"\\index_source\\Posts.xml"));
         } catch (FileNotFoundException e) {
-            System.out.println("Could not open File!");
+            System.out.println("No such File!");
             e.printStackTrace();
         }
         InputSource in_source = new InputSource(is);
@@ -203,6 +207,10 @@ public class Indexer {
         return reader;
     }
 
+    /**
+     * Searches the most frequent co-occurrence tag for each tag and writes it to the co_occurrences.txt file
+     * @param handler The StackExchangeHandler object which holds all co-occurrences of all tags.
+     */
     public void retrieveCooccurrences(StackExchangeHandler handler) {
         HashMap<String, HashMap<String, Integer>> co_occurrences  = handler.getCo_occurrences();
         String co_occurrence_string = "";

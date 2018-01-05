@@ -109,9 +109,6 @@ public class Main {
         prog_bar.setValue(75);
         vs.query_doc = null;
 
-        //System.out.println("Start getting root childs");
-        //ArrayList<CategoryNode> nodes =  vs.getCategoryTree().getRootCategory().getAllChilds();
-        //System.out.println("Number childs " + nodes.size());
         GUI gui = new GUI(vs);
         gui.setHistogramPrefix(histogram_prefix);
         gui.setSuppressHistograms(suppress_histograms);
@@ -130,9 +127,6 @@ public class Main {
             if(stop_after_evaluation)
                 System.exit(1);
         }
-        //System.out.println("Docterms retrieved");
-        //vs.scoreDocs_cosine();
-
 
 
     }

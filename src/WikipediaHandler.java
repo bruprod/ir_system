@@ -53,7 +53,6 @@ public class WikipediaHandler extends DefaultHandler {
         }
         else if(qName.equals("redirect"))
             escape = true;
-
     }
 
     /**
@@ -88,9 +87,6 @@ public class WikipediaHandler extends DefaultHandler {
             }
             else if(node_content.contains("Template:"))
                 escape = true;
-
-
-
         }
         else if(qName.equals(text)){
             ArrayList<String> parent_categories = new ArrayList<>();

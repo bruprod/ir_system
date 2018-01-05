@@ -20,7 +20,7 @@ import static org.apache.lucene.index.MultiFields.getTerms;
  */
 public class VectorSpaceModel {
     boolean CATEGORIES_ENABLED = false;
-    int[] seeds = {42, 49, 7582, 483, 798, 198, 16565, 4561, 46513, 98723};
+    int[] seeds = {42, 49, 7582, 483, 798, 198, 16565, 4561, 46513, 98723, 49849};
     ArrayList<ArrayList<Integer>> docs_restricted = new ArrayList<>();
     BooleanQuery query = null;
     TermQuery t_query = null;
@@ -32,17 +32,16 @@ public class VectorSpaceModel {
     HashMap<BytesRef, Double> inverse_doc_frequencies = new HashMap<>();
     HashMap<String, CategoryNode> categories = new HashMap<>();
     CategoryTree category_tree;
-    HashMap<String, CategoryNode> possible_root_categories = new HashMap<>();
     HashMap<String, Doc> documents = new HashMap<>();
     ArrayList<CategoryNode> restricted_categories = new ArrayList<>();
-    HashMap<BytesRef, String> terms_string_map = new HashMap<>();
     ArrayList<String> doc_name = new ArrayList<>();
     JProgressBar prog_bar;
     ArrayList<Doc> result_set;
     String content = "content";
     HashMap<String, Topic> tag_to_topic = new HashMap<>();
     HashMap<String, String> co_occurrences = new HashMap<>();
-    final int NUMBER_OF_TERMS_FOR_EXTENSION = 3;
+    HashMap<BytesRef, String> terms_string_map = new HashMap<>();
+    final int NUMBER_OF_TERMS_FOR_EXTENSION = Integer.MAX_VALUE;
     int amount_restricted = 0;
     int number_docs;
     int number_terms = 0;
@@ -65,7 +64,6 @@ public class VectorSpaceModel {
         TermsEnum coll_terms_enum = null;
 
         try {
-
             BytesRef ref = null;
             if(getTerms(reader, content) != null)
                 coll_terms_enum = getTerms(reader, content).iterator();
@@ -76,14 +74,12 @@ public class VectorSpaceModel {
             }
             while((ref = coll_terms_enum.next()) != null){
                 BytesRef save = new BytesRef(ref.utf8ToString());
-                //collection_terms.add(save);
                 terms_string_map.put(save, ref.utf8ToString());
                 int doc_frequency = reader.docFreq(new Term(content, save.utf8ToString()));
                 double epsilon = 0.0000000000000000001;
                 double idf = Math.log(number_docs / (doc_frequency+epsilon));
                 inverse_doc_frequencies.put(save, idf);
                 number_terms++;
-                //document_frequencies.put(save, reader.docFreq(new Term(content, save.utf8ToString())));
             }
             prog_bar.setValue(prog_bar.getValue()+5);
             System.out.println("Collection terms: " + collection_terms.size());
@@ -95,9 +91,6 @@ public class VectorSpaceModel {
                 title_doc.setTitle(title);
                 doc_name.add(title);
                 documents.put(title, title_doc);
-
-
-
 
                 String outlinks_string = index_doc.get("outlinks");
                 String[] outlinks = outlinks_string.split(";");
@@ -152,33 +145,18 @@ public class VectorSpaceModel {
                         }
                     }
                     fs.close();
-
-                } catch (FileNotFoundException e) {
-                    //e.printStackTrace();
-                    //System.exit(2);
+                } catch (FileNotFoundException ignored) {
                 }
             }
             System.out.println("Cooc map size: " + co_occurrences.size());
-
             prog_bar.setValue(prog_bar.getValue()+10);
-
             System.out.println("Documents size: " + documents.size());
-
             category_tree = new CategoryTree(categories, new CategoryNode("not enabled", new ArrayList<>()));
             if(CATEGORIES_ENABLED) {
                 buildCategoryTree();
-                System.out.println("Contents childs " + categories.get("Contents").getSubCategories().size());
-                for (CategoryNode node : categories.get("Contents").getSubCategories()) {
-                    System.out.println("Child: " + node.categorie_name);
-                }
-
                 CategoryNode root_node = categories.get("Contents");
                 category_tree = new CategoryTree(categories, root_node);
-                System.out.println("Category size " + categories.size());
-                System.out.println("Possible roots size " + possible_root_categories.size());
             }
-
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -228,18 +206,14 @@ public class VectorSpaceModel {
             List<BooleanClause> query_clauses = query.clauses();
             for (BooleanClause clause : query_clauses) {
                 BytesRef ref = new BytesRef(clause.toString().split(":")[1]);
-                //System.out.println("bytesref " + ref + " string " + ref.utf8ToString());
                 if(ref != null)
                     query_terms.add(ref);
             }
         }
         else{
-            //System.out.println("Tquery" + t_query.toString());
             BytesRef ref = new BytesRef(t_query.getTerm().text());
             if(ref != null)
                 query_terms.add(ref);
-
-
         }
         Doc query = null;
         if(query_doc != null)
@@ -248,7 +222,6 @@ public class VectorSpaceModel {
             query = new Doc(-1, query_terms);
 
         query_doc = query;
-
         HashSet<Integer> posting_docs = new HashSet<>();
 
         for(BytesRef term : query_terms) {
@@ -259,7 +232,6 @@ public class VectorSpaceModel {
                         posting_docs.add(doc_enum.docID());
                     }
                 }
-
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -268,23 +240,18 @@ public class VectorSpaceModel {
             int number_docs_to_restrict = posting_docs.size() * amount_restricted / 100;
             int number_restricted = 0;
             int index = amount_restricted/10;
+            HashSet<Integer> already_restricted = new HashSet<>();
             Random rand_gen = new Random(seeds[index]);
             while(number_restricted < number_docs_to_restrict){
                 int random_num = rand_gen.nextInt(number_docs);
-                if(posting_docs.contains(random_num)){
+                if(posting_docs.contains(random_num) && !already_restricted.contains(random_num)){
                     documents.get(doc_name.get(random_num)).setRestricted(true);
+                    already_restricted.add(random_num);
                     number_restricted++;
                 }
-
             }
             for (Integer i : posting_docs) {
                 boolean to_restrict = false;
-                /*double random_number = Math.random();
-                if(random_number < ((amount_restricted+5)/100.0) && number_restricted < number_docs_to_restrict) {
-                    to_restrict = true;
-                    number_restricted++;
-                }*/
-                //Document document = reader.document(i);
                 Doc doc = documents.get(doc_name.get(i));
                 double angle;
                 if(evaluation)
@@ -302,8 +269,6 @@ public class VectorSpaceModel {
                         doc.addCategory(node);
                     }
                 }
-
-
                 if(CATEGORIES_ENABLED) {
                     for (CategoryNode node : doc.getCategories()) {
                         if (node.isRestricted()) {
@@ -317,9 +282,6 @@ public class VectorSpaceModel {
                 }
                 docs.add(doc);
             }
-            /*System.out.println("Number of Docs restricted: " + number_restricted
-                    + " Number docs should be restricted: " + number_docs_to_restrict
-                    + " Number docs in result: " + posting_docs.size());*/
             ArrayList<Doc> docs_without_restricted = new ArrayList<>();
 
             for(int i = 0; i < docs.size(); i++){
@@ -332,9 +294,7 @@ public class VectorSpaceModel {
             result_set = docs_without_restricted;
             for(int i = 0; i < docs_without_restricted.size(); i++)
                 docs_without_restricted.get(i).setInitRank(i);
-        }catch (IOException e){
-
-        }
+        }catch (IOException ignored){}
     }
 
     /**
@@ -453,11 +413,11 @@ public class VectorSpaceModel {
         {
             if(doc1.getTfidfVector() == null) {
                 ArrayList<BytesRef> tokens = doc1.getTokens();
-                for(int i = 0; i < tokens.size(); i++) {
-                    BytesRef ref = tokens.get(i);
-                    int freq = Collections.frequency(doc1.getTokens(), ref);
+                HashSet<BytesRef> base = new HashSet<>(doc1.getTokens());
+                for(BytesRef ref : base){
+                    int freq = Collections.frequency(tokens, ref);
                     double idf = inverseDocFreq(ref);
-                    tf_vec.put(ref.utf8ToString(), freq * idf);
+                    tf_vec.put(terms_string_map.get(ref), freq * idf);
                     sum_doc1 += freq * idf;
                 }
             }
@@ -518,7 +478,6 @@ public class VectorSpaceModel {
         HashSet<String> key_list = new HashSet<>(tf_vec.keySet());
         key_list.retainAll(tf_vec_2.keySet());
         double scalar = 0;
-
         for(String key : key_list){
             double tfidf_1 = tf_vec.get(key);
             double tfidf_2 = tf_vec_2.get(key);
@@ -526,12 +485,8 @@ public class VectorSpaceModel {
             tfidf_2 /= sum_doc2;
             scalar += tfidf_1 * tfidf_2;
         }
-
         double retval = 0;
-
         retval = Math.toDegrees(Math.acos(scalar));
-
-        //System.out.println("Scalar " + scalar + " angle " + Math.acos(scalar) + " Sum doc1 " + sum_doc1 ) ;
         return retval;
 
     }
@@ -557,11 +512,9 @@ public class VectorSpaceModel {
      * @param gamma the weight for the irrelevant documents
      */
     public void PseudoRelevanceFeedbackRocchio(int number_top_ranked, Doc query, double alpha, double beta, double gamma){
-
         if(number_top_ranked > docs.size())
             number_top_ranked = docs.size();
         Doc[] top_scored_docs = new Doc[number_top_ranked];
-
 
         for(int i = 0; i < number_top_ranked; i++)
             top_scored_docs[i] = docs.get(i);
@@ -572,7 +525,6 @@ public class VectorSpaceModel {
         for (BytesRef term : query.getTokens()) {
             int freq = Collections.frequency(query.getTokens(), term);
             double idf = inverseDocFreq(term);
-            //tfidf_query.put(terms_string_map.get(term), freq * idf * alpha);
             expansion_terms.put(terms_string_map.get(term), freq * idf * alpha);
         }
 
@@ -595,7 +547,7 @@ public class VectorSpaceModel {
                         pe = te.postings(pe, PostingsEnum.FREQS);
                         pe.nextDoc();
                         double idf = inverseDocFreq(term);
-                        doc_vec.put(terms_string_map.get(term), (pe.freq() * idf));
+                        doc_vec.put(terms_string_map.get(term), (beta * pe.freq() * idf));
                         vec_lengths.add(pe.freq() * idf);
                     }catch (Exception e){
                     }
@@ -607,10 +559,8 @@ public class VectorSpaceModel {
         }
 
         HashSet<String> term_base = new HashSet<>();
-
         for(HashMap doc_map : tfidf_doc_vecs)
             term_base.addAll(doc_map.keySet());
-
         for(String term : term_base){
             double sum = 0;
             int i = 0;
@@ -630,9 +580,7 @@ public class VectorSpaceModel {
                 old_val += sum * beta / number_top_ranked;
                 tfidf_query.put(term, old_val);
             }
-
         }
-
         ArrayList<Double> highest_values = new ArrayList<>(tfidf_query.values());
         Collections.sort(highest_values, Collections.reverseOrder());
 
@@ -644,18 +592,12 @@ public class VectorSpaceModel {
                 }
             }
         }
-
-        //System.out.println("expansion terms " + expansion_terms.toString());
-
         query.setTfidfVector(expansion_terms);
-        //System.out.println("docs" + docs.toString());
         for(int i = 0; i < docs.size(); i++) {
             Doc doc = docs.get(i);
             doc.setScore(cosine_similarity(query, doc));
         }
-
         ArrayList<Doc> docs_without_restricted = new ArrayList<>();
-
 
         for(int i = 0; i < docs.size(); i++){
             Doc doc = docs.get(i);
@@ -866,8 +808,6 @@ public class VectorSpaceModel {
                             idfs.add(idf);
                             tfs.add(tf);
                         }
-
-
                     } catch (Exception e) {
                         System.err.println(e);
                     }
@@ -877,14 +817,12 @@ public class VectorSpaceModel {
                     double tf = tfs.get(i);
                     double avg_doc_len = (double)number_terms/(double)number_docs;
                     score += (idf*tf*(k+1))/(tf+(k*(1-b+b*(term_count/avg_doc_len))));
-                    //System.out.println("Idf: " + idf + " Tf: " + tf + " avg_doc_len: " + avg_doc_len + " terms_count " + term_count);
-                }
+              }
                 doc.setScore(score);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-
         ArrayList<Doc> docs_without_restricted = new ArrayList<>();
         for(Doc doc : docs){
             if(!doc.isRestricted())
@@ -893,7 +831,6 @@ public class VectorSpaceModel {
         Collections.sort(docs_without_restricted, new DocCompareBM());
         result_set = docs_without_restricted;
         query_doc = null;
-
     }
 
     /**
