@@ -85,7 +85,7 @@ public class Indexer {
     /**
      * The Indexer used before initializing the vector space model. Runs only if new index is already written, with the
      * small artificial intelligence StackExchange corpus.
-     * @param path
+     * @param path Unused. Should once be used for defining the path of the file which should be indexed.
      * @throws IOException Throws an IOException if any error occurs while parsing.
      */
     public Indexer(String path) throws IOException {
